@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import { config } from '../config';
 import { ecrireBaseComplete } from '../db/depot';
-import { creerBaseInitiale } from '../db/seeders/demonstration';
+import { creerBaseInitiale } from '../db/donnees/demonstration';
 import * as parametresService from '../services/parametres.service';
 import * as notificationsService from '../services/notifications.service';
 import { executer, lire } from '../services/commandes';

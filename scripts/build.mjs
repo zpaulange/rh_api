@@ -9,7 +9,7 @@ const externes = Object.keys(pkg.dependencies ?? {});
 for (const [entree, sortie] of [
   ['src/serveur.ts', 'dist/serveur.js'],
   ['src/scripts/migrer.ts', 'dist/migrer.js'],
-  ['src/scripts/seed.ts', 'dist/seed.js'],
+  ['src/scripts/creer-base.ts', 'dist/creer-base.js'],
   ['src/scripts/initialiser.ts', 'dist/initialiser.js'],
 ]) {
   await build({

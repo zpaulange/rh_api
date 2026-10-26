@@ -2,7 +2,7 @@
   "name": "sikarh-backend",
   "private": true,
   "version": "1.0.0",
-  "description": "API SikaRH Pro — Node.js, Express, TypeScript, Sequelize, MySQL",
+  "description": "API SikaRH — Node.js, Express, TypeScript, Sequelize, MySQL",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -12,12 +12,20 @@
     "start": "node dist/serveur.js",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "migrer": "tsx src/scripts/migrer.ts",
-    "seed": "tsx src/scripts/seed.ts",
     "test": "tsx src/scripts/test-api.ts",
-    "initialiser": "tsx src/scripts/initialiser.ts",
-    "migrer:prod": "node dist/migrer.js",
-    "initialiser:prod": "node dist/initialiser.js"
+    "db:creer": "tsx src/scripts/creer-base.ts",
+    "migration:generer": "tsx src/scripts/generer.ts migration",
+    "db:migrer": "tsx src/scripts/migrer.ts appliquer",
+    "db:migrer:annuler": "tsx src/scripts/migrer.ts annuler",
+    "db:migrer:statut": "tsx src/scripts/migrer.ts statut",
+    "seeder:generer": "tsx src/scripts/generer.ts seeder",
+    "db:seed": "tsx src/scripts/seed.ts appliquer",
+    "db:seed:annuler": "tsx src/scripts/seed.ts annuler",
+    "db:seed:statut": "tsx src/scripts/seed.ts statut",
+    "db:initialiser": "tsx src/scripts/initialiser.ts",
+    "db:creer:prod": "node dist/creer-base.js",
+    "db:migrer:prod": "node dist/migrer.js appliquer",
+    "db:initialiser:prod": "node dist/initialiser.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

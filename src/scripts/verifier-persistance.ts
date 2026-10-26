@@ -5,7 +5,7 @@ import '../db/modeles';
 import { sequelize } from '../db/sequelize';
 import { vuePour } from '../services/vues';
 import type { Database } from '../types';
-import { canonique, differences } from './outils';
+import { canonique, differences } from '../db/controle';
 
 const API = process.env.API_URL ?? 'http://localhost:4000/api';
 const r = await fetch(`${API}/auth/connexion`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-SikaRH': '1' }, body: JSON.stringify({ email: 'admin@entreprise.bj', motDePasse: 'admin123' }) });

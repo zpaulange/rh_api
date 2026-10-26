@@ -1,5 +1,7 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+dotenv.config({ quiet: true });
 
 // Configuration validée au démarrage : le serveur refuse de démarrer avec une configuration incomplète
 const schema = z.object({

@@ -1,10 +1,9 @@
 import { z } from 'zod';
 import { chargerBase, ecrireBaseComplete } from '../db/depot';
-import { migrer } from '../db/migrations';
-import '../db/modeles';
+import { migrationsEnAttente } from '../db/migrateur';
 import { sequelize } from '../db/sequelize';
 import { securiserMotsDePasse } from '../services/moteur';
-import { creerBaseInitiale } from '../db/seeders/demonstration';
+import { creerBaseInitiale } from '../db/donnees/demonstration';
 import { serverNowISO } from '../metier/horloge';
 import { PERMISSIONS_PAR_DEFAUT } from '../metier/permissions';
 import { dateKey } from '../metier/temps';
@@ -12,7 +11,8 @@ import type { Database } from '../types';
 
 // Initialisation d'une base de production vierge : paramètres et jours fériés légaux, un département
 // « Direction générale » et le compte administrateur décrit par les variables d'environnement.
-// Usage : ADMIN_EMAIL=… ADMIN_MOT_DE_PASSE=… ADMIN_PRENOM=… ADMIN_NOM=… npm run initialiser
+// Usage (après npm run db:creer et npm run db:migrer) :
+//   ADMIN_EMAIL=… ADMIN_MOT_DE_PASSE=… ADMIN_PRENOM=… ADMIN_NOM=… npm run db:initialiser
 const env = z
   .object({
     ADMIN_EMAIL: z.string().email(),
@@ -26,7 +26,10 @@ if (!env.success) {
   process.exit(1);
 }
 await sequelize.authenticate();
-await migrer();
+if ((await migrationsEnAttente()).length) {
+  console.error('Migrations en attente : lancez d’abord « npm run db:migrer ».');
+  process.exit(1);
+}
 if (await chargerBase()) {
   console.error('La base contient déjà des données : initialisation annulée.');
   process.exit(1);

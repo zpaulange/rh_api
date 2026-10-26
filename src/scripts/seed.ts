@@ -1,30 +1,23 @@
-import { config } from '../config';
-import { chargerBase, ecrireBaseComplete } from '../db/depot';
-import { migrer } from '../db/migrations';
-import '../db/modeles';
-import { sequelize } from '../db/sequelize';
-import { securiserMotsDePasse } from '../services/moteur';
-import { creerBaseInitiale } from '../db/seeders/demonstration';
-import { canonique, differences } from './outils';
+import { semeur } from '../db/migrateur';
+import { commande } from './connexion';
 
-// Données de démonstration (db/seeders/demonstration.ts), générées par rapport à la date du jour.
-if (config.NODE_ENV === 'production' && !process.argv.includes('--force')) {
-  console.error('Refusé en production (ajoutez --force si vous savez ce que vous faites).');
-  process.exit(1);
-}
-await sequelize.authenticate();
-await migrer();
-const base = creerBaseInitiale();
-securiserMotsDePasse(base);
-base.version = 1;
-await ecrireBaseComplete(base);
+// Seeders (données). Usage :
+//   npm run db:seed              exécute les seeders en attente (chacun une seule fois)
+//   npm run db:seed:annuler      annule le dernier seeder exécuté
+//   npm run db:seed:statut       liste les seeders exécutés et en attente
+// L'API garde les données en mémoire : arrêtez-la pendant l'exécution des seeders, puis relancez-la.
+const action = process.argv[2] ?? 'appliquer';
 
-// Contrôle d'aller-retour : la base relue doit être identique à la base écrite
-const relue = await chargerBase();
-if (!relue || canonique(relue) !== canonique(base)) {
-  console.error('[seed] ÉCART entre la base écrite et la base relue :\n', differences(base, relue).join('\n'));
-  process.exit(1);
-}
-console.log(`[seed] base de démonstration écrite et vérifiée : ${base.employes.length} collaborateurs, ${base.pointages.length} pointages, ${base.conges.length} congés, ${base.campagnesPaie.length} paies, ${base.documents.length} documents, ${base.audit.length} entrées d'audit`);
-console.log('[seed] comptes : admin@entreprise.bj / admin123 • rh@entreprise.bj / rh123 • k.mensah@entreprise.bj / employe123');
-await sequelize.close();
+await commande(async () => {
+  if (action === 'appliquer') {
+    const faits = await semeur.up();
+    console.log(faits.length ? `✔ ${faits.length} seeder(s) exécuté(s). Lancez l'API : npm run dev` : '✔ Aucun seeder en attente.');
+    if (faits.some((s) => s.name.endsWith('demonstration'))) console.log('  Comptes : admin@entreprise.bj / admin123 • rh@entreprise.bj / rh123 • k.mensah@entreprise.bj / employe123');
+  } else if (action === 'annuler') {
+    const annules = await semeur.down();
+    console.log(annules.length ? `✔ Seeder annulé : ${annules.map((s) => s.name).join(', ')}` : 'Aucun seeder à annuler.');
+  } else if (action === 'statut') {
+    for (const s of await semeur.executed()) console.log(`  ✔ ${s.name}`);
+    for (const s of await semeur.pending()) console.log(`  … ${s.name} (en attente)`);
+  } else throw new Error(`Action inconnue : ${action} (appliquer, annuler, statut)`);
+});

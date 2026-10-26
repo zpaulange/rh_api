@@ -188,11 +188,20 @@ export async function persisterDifferences(ancien: Database, nouveau: Database, 
 }
 
 /** Écrit une base complète (initialisation) : vide les tables puis insère tout */
+/** Supprime toutes les données métier (les tables et l'historique des migrations sont conservés) */
+async function supprimerDonnees(transaction: Transaction): Promise<void> {
+  await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction });
+  for (const t of [...Object.keys(modeles), 'permissions_roles', 'meta']) await sequelize.query(`DELETE FROM \`${t}\``, { transaction });
+  await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction });
+}
+
+export async function viderBase(): Promise<void> {
+  await sequelize.transaction(supprimerDonnees);
+}
+
 export async function ecrireBaseComplete(db: Database): Promise<void> {
   await sequelize.transaction(async (transaction) => {
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 0', { transaction });
-    for (const t of [...Object.keys(modeles), 'permissions_roles', 'meta']) await sequelize.query(`DELETE FROM \`${t}\``, { transaction });
-    await sequelize.query('SET FOREIGN_KEY_CHECKS = 1', { transaction });
+    await supprimerDonnees(transaction);
     const vide = baseVide({ ...db.parametres, joursFeries: [], heureDebut: '' } as Database['parametres'], {} as Database['permissions']);
     await persisterDifferences(vide, db, transaction);
   });

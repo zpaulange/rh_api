@@ -1,18 +1,27 @@
 import { config } from './config';
 import { chargerBase } from './db/depot';
-import { migrer } from './db/migrations';
-import './db/modeles';
-import { sequelize } from './db/sequelize';
+import { migrationsEnAttente } from './db/migrateur';
+import { expliquerErreurConnexion, sequelize } from './db/sequelize';
 import { demarrerMoteur } from './services/moteur';
 import { demarrerTaches } from './services/taches';
 import { creerApplication } from './app';
 
 async function demarrer(): Promise<void> {
-  await sequelize.authenticate();
-  await migrer();
+  try {
+    await sequelize.authenticate();
+  } catch (err) {
+    console.error(`[api] ${expliquerErreurConnexion(err)}`);
+    process.exit(1);
+  }
+  // Le schéma est mis à jour explicitement (npm run db:migrer), jamais au démarrage
+  const enAttente = await migrationsEnAttente();
+  if (enAttente.length) {
+    console.error(`[api] ${enAttente.length} migration(s) en attente (${enAttente.join(', ')}) : lancez « npm run db:migrer ».`);
+    process.exit(1);
+  }
   const db = await chargerBase();
   if (!db) {
-    console.error('Base vide : initialisez-la avec « npm run seed » (démonstration) ou « npm run initialiser » (production).');
+    console.error('[api] Base vide : lancez « npm run db:seed » (données de démonstration) ou « npm run db:initialiser » (production).');
     process.exit(1);
   }
   demarrerMoteur(db);

@@ -25,8 +25,9 @@ src/
 │                         documents certifiés (empreinte SHA-256), permissions, géolocalisation, horloge
 ├── referentiels/         barèmes et constantes légales (Code du travail, CCGT, CGI), identité de l'entreprise
 ├── types/                modèle de données
-├── db/                   Sequelize : schéma, modèles, migrations (Umzug), dépôt, seeders/demonstration.ts
-└── scripts/              migrer, seed, initialiser, tests d'intégration, vérification de persistance
+├── db/                   Sequelize : schéma, modèles, dépôt, migrateur.ts (Umzug), migrations/, seeders/,
+│                         donnees/demonstration.ts
+└── scripts/              creer-base, generer, migrer, seed, initialiser, tests, vérification de persistance
 ```
 
 Le backend est autonome : il n'importe aucun fichier du frontend. Le contrat entre les deux est l'API REST
@@ -108,18 +109,42 @@ Codes d'erreur : 400 données invalides · 401 session absente ou expirée · 40
 
 « gestion » = rôles RH et administrateur, sous réserve des permissions accordées au rôle.
 
+## Base de données
+
+L'API utilise le serveur MySQL / MariaDB installé sur la machine (administrable avec phpMyAdmin).
+Connexion dans `.env` : `DB_HOTE`, `DB_PORT`, `DB_NOM`, `DB_UTILISATEUR`, `DB_MOT_DE_PASSE`
+(mot de passe entre apostrophes s'il contient `$` ou `#`).
+
+| Commande | Rôle |
+|---|---|
+| `npm run db:creer` | crée la base `DB_NOM` si elle n'existe pas (utf8mb4) |
+| `npm run migration:generer -- <nom>` | crée `src/db/migrations/<horodatage>-<nom>.ts` (squelette `up` / `down`) et met à jour l'index |
+| `npm run db:migrer` | applique les migrations en attente (table `migrations_sikarh`) |
+| `npm run db:migrer:annuler` | annule la dernière migration |
+| `npm run db:migrer:statut` | migrations appliquées et en attente |
+| `npm run seeder:generer -- <nom>` | crée `src/db/seeders/<horodatage>-<nom>.ts` et met à jour l'index |
+| `npm run db:seed` | exécute les seeders en attente, chacun une seule fois (table `seeders_sikarh`) |
+| `npm run db:seed:annuler` | annule le dernier seeder (le seeder de démonstration vide les données) |
+| `npm run db:seed:statut` | seeders exécutés et en attente |
+| `npm run db:initialiser` | base de production : paramètres légaux et compte administrateur (variables `ADMIN_*`) |
+
+Une migration qui ajoute, renomme ou supprime une colonne doit aussi être reportée dans `src/db/schema.ts`.
+L'API garde les données en mémoire : arrêtez-la avant `db:seed`, `db:seed:annuler` ou `db:migrer:annuler`.
+
 ## Démarrage (développement)
 
 ```bash
-docker compose up -d          # MySQL 8 sur 127.0.0.1:3307
-cp .env.example .env          # puis renseigner JWT_SECRET (32 caractères minimum)
 npm install
-npm run migrer
-npm run seed                  # données de démonstration (ou : npm run initialiser pour une base de production)
-npm run dev                   # API sur http://localhost:4000/api
+npm run db:creer              # base « sikarh » sur le serveur MySQL local
+npm run db:migrer             # tables
+npm run db:seed               # données de démonstration
+npm run dev                   # API sur http://localhost:4000/api (redémarre à chaque modification)
 ```
 
 Frontend : `cd ../frontend && npm run dev` (le proxy Vite redirige `/api` vers le port 4000).
+
+Au démarrage, l'API vérifie la base : base absente, migration en attente ou base vide sont signalées
+avec la commande à lancer.
 
 Comptes de démonstration : `admin@entreprise.bj` / `admin123`, `rh@entreprise.bj` / `rh123`,
 `k.mensah@entreprise.bj` / `employe123`.
@@ -127,14 +152,14 @@ Comptes de démonstration : `admin@entreprise.bj` / `admin123`, `rh@entreprise.b
 ## Production
 
 ```bash
-npm run build                 # dist/serveur.js, migrer.js, seed.js, initialiser.js
-npm run migrer:prod
-npm run initialiser:prod      # première installation uniquement
+npm run build                 # dist/serveur.js, creer-base.js, migrer.js, initialiser.js
+npm run db:creer:prod
+npm run db:migrer:prod
+npm run db:initialiser:prod   # première installation uniquement
 npm start
 ```
 
 `NODE_ENV=production`, `COOKIE_SECURISE=true` (HTTPS), `DEMO=false`, `LIMITE_ECHECS_CONNEXION=30`, `CORS_ORIGINE` = adresse du frontend.
-Le paramétrage `docker-compose.yml` assouplit la durabilité d'écriture de MySQL : il est réservé au développement.
 
 ## Tests
 
